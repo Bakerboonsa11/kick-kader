@@ -109,52 +109,52 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-gradient-dark">
       <DashboardHeader onSignOut={signOut} />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-            Admin Dashboard
+        <div className="mb-10">
+          <h1 className="text-5xl font-black mb-3 bg-gradient-ultra bg-clip-text text-transparent">
+            Admin Command Center
           </h1>
-          <p className="text-muted-foreground">Manage tournament players and announcements</p>
+          <p className="text-muted-foreground text-lg">Elite tournament management dashboard</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+        <div className="grid gap-6 md:grid-cols-3 mb-10">
+          <Card className="shadow-xl hover:shadow-glow transition-all duration-300 border-2 border-primary/20 bg-card/80 backdrop-blur-sm group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Players</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Total Players</CardTitle>
+              <Users className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{players.length}</div>
+              <div className="text-4xl font-black text-foreground">{players.length}</div>
             </CardContent>
           </Card>
           
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card className="shadow-xl hover:shadow-glow transition-all duration-300 border-2 border-success/20 bg-card/80 backdrop-blur-sm group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Selected Players</CardTitle>
-              <UserCheck className="h-4 w-4 text-success" />
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Selected Squad</CardTitle>
+              <UserCheck className="h-5 w-5 text-success group-hover:scale-110 transition-transform" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-success">
+              <div className="text-4xl font-black bg-gradient-primary bg-clip-text text-transparent">
                 {selectedCount} / {maxPlayers}
               </div>
             </CardContent>
           </Card>
           
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <Card className="shadow-xl hover:shadow-gold transition-all duration-300 border-2 border-secondary/20 bg-card/80 backdrop-blur-sm group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Squad Status</CardTitle>
-              <Trophy className="h-4 w-4 text-warning" />
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Squad Status</CardTitle>
+              <Trophy className="h-5 w-5 text-secondary group-hover:scale-110 transition-transform" />
             </CardHeader>
             <CardContent>
-              <div className="text-sm">
+              <div className="text-lg font-bold">
                 {selectedCount === maxPlayers ? (
-                  <Badge className="bg-success">Complete</Badge>
+                  <Badge className="bg-gradient-primary shadow-glow text-base px-3 py-1">Complete</Badge>
                 ) : (
-                  <Badge variant="secondary">{maxPlayers - selectedCount} spots left</Badge>
+                  <Badge variant="secondary" className="text-base px-3 py-1">{maxPlayers - selectedCount} spots left</Badge>
                 )}
               </div>
             </CardContent>
@@ -162,28 +162,28 @@ export default function AdminDashboard() {
         </div>
 
         {/* Actions */}
-        <div className="mb-6 flex gap-4">
-          <Button onClick={() => setAnnouncementOpen(true)} className="shadow-md">
-            <Megaphone className="mr-2 h-4 w-4" />
+        <div className="mb-8 flex gap-4">
+          <Button onClick={() => setAnnouncementOpen(true)} className="bg-gradient-primary hover:opacity-90 shadow-glow text-base px-6 py-6 hover:scale-105 transition-all">
+            <Megaphone className="mr-2 h-5 w-5" />
             Post Announcement
           </Button>
         </div>
 
         {/* Players Grid */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">All Players</h2>
+          <h2 className="text-3xl font-black mb-6 text-foreground">Player Registry</h2>
           {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            <div className="text-center py-20">
+              <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent shadow-glow"></div>
             </div>
           ) : players.length === 0 ? (
-            <Card className="shadow-md">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No players registered yet</p>
+            <Card className="shadow-xl border-2 border-primary/10 bg-card/80 backdrop-blur-sm">
+              <CardContent className="py-16 text-center">
+                <p className="text-muted-foreground text-lg">No players registered yet</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {players.map((player) => (
                 <PlayerCard
                   key={player.id}

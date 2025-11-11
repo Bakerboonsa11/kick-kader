@@ -111,15 +111,28 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow">
-            <Trophy className="w-8 h-8 text-primary-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-dark relative overflow-hidden p-4">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 right-10 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-10 left-10 w-80 h-80 bg-secondary/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <Card className="w-full max-w-md shadow-2xl border-2 border-primary/20 bg-card/90 backdrop-blur-xl relative z-10">
+        <CardHeader className="text-center space-y-6 pb-8">
+          <div className="relative mx-auto">
+            <div className="absolute inset-0 bg-gradient-ultra rounded-full blur-2xl opacity-60 animate-glow-pulse"></div>
+            <div className="relative w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow mx-auto">
+              <Trophy className="w-10 h-10 text-primary-foreground" />
+            </div>
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold">Football Tournament</CardTitle>
-            <CardDescription>Player Management System</CardDescription>
+            <CardTitle className="text-4xl font-black bg-gradient-ultra bg-clip-text text-transparent">
+              ULTRA TOURNAMENT
+            </CardTitle>
+            <CardDescription className="text-base mt-2 text-muted-foreground">
+              Premium Player Management System
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -154,7 +167,7 @@ export default function Auth() {
                   />
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90 shadow-glow text-lg py-6" disabled={loading}>
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
@@ -235,7 +248,7 @@ export default function Auth() {
                   />
                   {errors.position && <p className="text-sm text-destructive">{errors.position}</p>}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90 shadow-glow text-lg py-6" disabled={loading}>
                   {loading ? "Creating Account..." : "Sign Up"}
                 </Button>
               </form>
