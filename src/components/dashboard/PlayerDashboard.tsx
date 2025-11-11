@@ -1,32 +1,33 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/firebase-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, CheckCircle, XCircle, Megaphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "./DashboardHeader";
 import { format } from "date-fns";
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/client";
 
 interface PlayerProfile {
-  full_name: string;
+  fullName: string;
   age: number;
   position: string;
-  experience_years: number;
-  performance_rating: number;
-  photo_url: string | null;
+  experienceYears: number;
+  performanceRating: number;
+  photoUrl: string | null;
 }
 
 interface PlayerStatus {
-  is_selected: boolean;
-  selected_at: string | null;
+  isSelected: boolean;
+  selectedAt: string | null;
 }
 
 interface Announcement {
   id: string;
   title: string;
   content: string;
-  created_at: string;
+  createdAt: any; // Can be Timestamp or Date
 }
 
 export default function PlayerDashboard() {
@@ -34,42 +35,46 @@ export default function PlayerDashboard() {
   const [status, setStatus] = useState<PlayerStatus | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, signOut } = useAuth();
+  const { user, userData, signOut } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    if (user && userData) {
       fetchPlayerData();
       fetchAnnouncements();
     }
-  }, [user]);
+  }, [user, userData]);
 
   const fetchPlayerData = async () => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user!.id)
-        .single();
+      // User data is already available from the auth context
+      if (userData) {
+        setProfile({
+          fullName: userData.fullName,
+          age: userData.age,
+          position: userData.position,
+          experienceYears: userData.experienceYears,
+          performanceRating: 0, // You'll need to fetch this separately if needed
+          photoUrl: null, // You can update this with Firebase Storage URL if you have user photos
+        });
+      }
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
-
-      // Fetch selection status
-      const { data: statusData, error: statusError } = await supabase
-        .from("players")
-        .select("is_selected, selected_at")
-        .eq("profile_id", user!.id)
-        .single();
-
-      if (statusError) throw statusError;
-      setStatus(statusData);
+      // Fetch player status
+      if (user) {
+        const playerDoc = await getDoc(doc(db, 'players', user.uid));
+        if (playerDoc.exists()) {
+          const playerData = playerDoc.data();
+          setStatus({
+            isSelected: playerData.isSelected || false,
+            selectedAt: playerData.selectedAt?.toDate()?.toISOString() || null,
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to load player data",
       });
     } finally {
       setLoading(false);
@@ -78,19 +83,26 @@ export default function PlayerDashboard() {
 
   const fetchAnnouncements = async () => {
     try {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      setAnnouncements(data || []);
+      const announcementsRef = collection(db, 'announcements');
+      const q = query(
+        announcementsRef,
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const announcementsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate()?.toISOString()
+      })) as Announcement[];
+      
+      setAnnouncements(announcementsData);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to load announcements",
       });
     }
   };
@@ -121,7 +133,7 @@ export default function PlayerDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-3xl font-black text-foreground">{profile?.full_name}</CardTitle>
+                  <CardTitle className="text-3xl font-black text-foreground">{profile?.fullName}</CardTitle>
                   <CardDescription className="text-lg font-semibold">{profile?.position}</CardDescription>
                 </div>
                 <div className="relative">
@@ -138,7 +150,7 @@ export default function PlayerDashboard() {
                 </div>
                 <div className="p-4 rounded-xl bg-gradient-dark border-2 border-primary/10">
                   <p className="text-sm text-muted-foreground font-semibold">Experience</p>
-                  <p className="text-2xl font-black text-foreground">{profile?.experience_years} years</p>
+                  <p className="text-2xl font-black text-foreground">{profile?.experienceYears} years</p>
                 </div>
               </div>
               <div>
@@ -147,10 +159,10 @@ export default function PlayerDashboard() {
                   <div className="flex-1 bg-gradient-dark rounded-full h-4 border-2 border-primary/20 overflow-hidden">
                     <div
                       className="bg-gradient-primary h-4 rounded-full transition-all shadow-glow"
-                      style={{ width: `${(profile?.performance_rating || 0) * 10}%` }}
+                      style={{ width: `${(profile?.performanceRating || 0) * 10}%` }}
                     />
                   </div>
-                  <span className="text-lg font-black text-primary">{profile?.performance_rating}/10</span>
+                  <span className="text-lg font-black text-primary">{profile?.performanceRating || 0}/10</span>
                 </div>
               </div>
             </CardContent>
@@ -161,7 +173,7 @@ export default function PlayerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-2xl font-black">
                 Tournament Status
-                {status?.is_selected ? (
+                {status?.isSelected ? (
                   <CheckCircle className="h-7 w-7 text-success" />
                 ) : (
                   <XCircle className="h-7 w-7 text-muted-foreground" />
@@ -170,7 +182,7 @@ export default function PlayerDashboard() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center py-10">
-                {status?.is_selected ? (
+                {status?.isSelected ? (
                   <>
                     <div className="relative inline-block mb-6">
                       <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-xl opacity-70 animate-glow-pulse"></div>
@@ -181,9 +193,9 @@ export default function PlayerDashboard() {
                     <p className="text-lg text-foreground font-semibold mb-3">
                       Congratulations! You're in the elite squad.
                     </p>
-                    {status.selected_at && (
+                    {status.selectedAt && (
                       <p className="text-sm text-muted-foreground">
-                        Selected on {format(new Date(status.selected_at), "PPP")}
+                        Selected on {format(new Date(status.selectedAt), "PPP")}
                       </p>
                     )}
                   </>
@@ -221,7 +233,7 @@ export default function PlayerDashboard() {
                   <CardHeader>
                     <CardTitle className="text-xl font-bold">{announcement.title}</CardTitle>
                     <CardDescription className="text-base">
-                      {format(new Date(announcement.created_at), "PPP 'at' p")}
+                      {announcement.createdAt ? format(new Date(announcement.createdAt), "PPP 'at' p") : 'No date'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

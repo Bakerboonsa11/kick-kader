@@ -1,0 +1,18 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    },
+    "firestore": {
+      "port": 9090,
+      "host": "0.0.0.0"
+    }
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  }
+}

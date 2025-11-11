@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/firebase-auth";
+import { db } from "@/integrations/firebase/client";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
   Dialog,
   DialogContent,
@@ -47,13 +48,12 @@ export default function AnnouncementDialog({
       const validated = announcementSchema.parse({ title, content });
       setLoading(true);
 
-      const { error } = await supabase.from("announcements").insert({
+      await addDoc(collection(db, "announcements"), {
         title: validated.title,
         content: validated.content,
-        created_by: user!.id,
+        createdBy: user!.uid,
+        createdAt: serverTimestamp(),
       });
-
-      if (error) throw error;
 
       toast({
         title: "Announcement Posted",

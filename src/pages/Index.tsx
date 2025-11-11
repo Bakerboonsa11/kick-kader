@@ -2,9 +2,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Users, Megaphone, Award, Sparkles, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/firebase-auth";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // Show loading state while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-dark relative overflow-hidden">
@@ -45,11 +56,11 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-6 justify-center pt-6">
             <Button 
               size="lg" 
-              onClick={() => navigate("/auth")} 
+              onClick={() => navigate(user ? "/dashboard" : "/auth")} 
               className="bg-gradient-primary hover:opacity-90 shadow-glow text-xl px-10 py-7 rounded-2xl group transition-all hover:scale-105"
             >
               <Zap className="mr-2 h-6 w-6 group-hover:rotate-12 transition-transform" />
-              Launch Dashboard
+              {user ? 'Go to Dashboard' : 'Launch Dashboard'}
             </Button>
             <Button
               size="lg"

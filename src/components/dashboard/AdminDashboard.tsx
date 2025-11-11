@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/firebase-auth";
+import { db } from "@/integrations/firebase/client";
+import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,16 +13,17 @@ import DashboardHeader from "./DashboardHeader";
 
 interface Player {
   id: string;
-  profile_id: string;
-  is_selected: boolean;
-  profiles: {
-    full_name: string;
-    age: number;
-    position: string;
-    experience_years: number;
-    performance_rating: number;
-    photo_url: string | null;
+  isSelected: boolean;
+  selectedAt?: {
+    seconds: number;
+    nanoseconds: number;
   };
+  fullName: string;
+  age: number;
+  position: string;
+  experienceYears: number;
+  performanceRating: number;
+  photoUrl?: string;
 }
 
 export default function AdminDashboard() {
@@ -31,7 +33,7 @@ export default function AdminDashboard() {
   const { signOut } = useAuth();
   const { toast } = useToast();
 
-  const selectedCount = players.filter((p) => p.is_selected).length;
+  const selectedCount = players.filter((p) => p.isSelected).length;
   const maxPlayers = 23;
 
   useEffect(() => {
@@ -40,25 +42,16 @@ export default function AdminDashboard() {
 
   const fetchPlayers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("players")
-        .select(`
-          id,
-          profile_id,
-          is_selected,
-          profiles (
-            full_name,
-            age,
-            position,
-            experience_years,
-            performance_rating,
-            photo_url
-          )
-        `)
-        .order("is_selected", { ascending: false });
-
-      if (error) throw error;
-      setPlayers(data as Player[]);
+      const playersRef = collection(db, "players");
+      const q = query(playersRef, orderBy("isSelected", "desc"));
+      const querySnapshot = await getDocs(q);
+      
+      const playersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Player[];
+      
+      setPlayers(playersData);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -81,15 +74,11 @@ export default function AdminDashboard() {
     }
 
     try {
-      const { error } = await supabase
-        .from("players")
-        .update({
-          is_selected: !currentStatus,
-          selected_at: !currentStatus ? new Date().toISOString() : null,
-        })
-        .eq("id", playerId);
-
-      if (error) throw error;
+      const playerRef = doc(db, "players", playerId);
+      await updateDoc(playerRef, {
+        isSelected: !currentStatus,
+        selectedAt: !currentStatus ? serverTimestamp() : null,
+      });
 
       await fetchPlayers();
       
@@ -187,8 +176,19 @@ export default function AdminDashboard() {
               {players.map((player) => (
                 <PlayerCard
                   key={player.id}
-                  player={player}
-                  onToggleSelect={() => togglePlayerSelection(player.id, player.is_selected)}
+                  player={{
+                    id: player.id,
+                    is_selected: player.isSelected,
+                    profiles: {
+                      full_name: player.fullName,
+                      age: player.age,
+                      position: player.position,
+                      experience_years: player.experienceYears,
+                      performance_rating: player.performanceRating,
+                      photo_url: player.photoUrl || ''
+                    }
+                  }}
+                  onToggleSelect={() => togglePlayerSelection(player.id, player.isSelected)}
                   isAdmin={true}
                 />
               ))}

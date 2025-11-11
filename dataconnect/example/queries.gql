@@ -1,0 +1,42 @@
+mutation AddCommentToTask($taskId: UUID!, $userId: UUID!, $content: String!) @auth(level: USER) {
+  comment_insert(data: {
+    taskId: $taskId,
+    userId: $userId,
+    content: $content,
+    createdAt_expr: "request.time"
+  })
+}
+
+query ListTasksForProject($projectId: UUID!) @auth(level: USER) {
+  tasks(where: {projectId: {eq: $projectId}}) {
+    id
+    title
+    description
+    status
+    dueDate
+    assignedTo {
+      id
+      displayName
+    }
+  }
+}
+
+mutation CreateNewProject($name: String!, $description: String!, $deadline: Timestamp!) @auth(level: USER) {
+  project_insert(data: {
+    name: $name,
+    description: $description,
+    deadline: $deadline,
+    createdById_expr: "auth.uid",
+    createdAt_expr: "request.time"
+  })
+}
+
+query GetUserProfile @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  user(key: {id_expr: "auth.uid"}) {
+    id
+    displayName
+    email
+    photoUrl
+    role
+  }
+}

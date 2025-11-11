@@ -6,7 +6,9 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   UserCredential,
-  updateProfile
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/integrations/firebase/client";
@@ -41,7 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up auth state persistence
+    const setAuthPersistence = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (error) {
+        console.error("Error setting auth persistence:", error);
+      }
+    };
+
+    setAuthPersistence();
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Auth state changed:", currentUser?.email);
       setUser(currentUser);
       
       if (currentUser) {
@@ -49,7 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserData);
+            const userData = userDoc.data() as UserData;
+            console.log("User data loaded:", userData);
+            setUserData(userData);
+          } else {
+            console.log("No user data found in Firestore");
+            setUserData(null);
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -58,8 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             description: "Failed to load user data.",
             variant: "destructive",
           });
+          setUserData(null);
         }
       } else {
+        console.log("No user signed in");
         setUserData(null);
       }
       
@@ -73,9 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Update user profile with display name
-      await updateProfile(user, { displayName: fullName });
       
       // Default role is 'player', you can change this based on your requirements
       const userData: UserData = {
@@ -91,34 +109,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(doc(db, 'users', user.uid), userData);
       setUserData(userData);
       
-      toast({
-        title: "Account created",
-        description: "Your account has been created successfully!",
-      });
-      
       return { error: null };
     } catch (error: any) {
       console.error("Sign up error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await setPersistence(auth, browserLocalPersistence);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("User signed in:", userCredential.user.email);
       return { error: null };
     } catch (error: any) {
       console.error("Sign in error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to sign in. Please check your credentials.",
-        variant: "destructive",
-      });
       return { error };
     }
   };
@@ -128,20 +133,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await firebaseSignOut(auth);
       setUser(null);
       setUserData(null);
-      navigate('/login');
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
+      // Clear any stored tokens or auth state
+      localStorage.removeItem('firebaseAuthToken');
+      console.log("User signed out");
+      // Redirect to home page
+      navigate('/');
     } catch (error) {
       console.error("Sign out error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
+      throw error;
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = auth.onIdTokenChanged(async (user) => {
+      if (user) {
+        // User is signed in
+        const token = await user.getIdToken();
+        localStorage.setItem('firebaseAuthToken', token);
+      } else {
+        // User is signed out
+        localStorage.removeItem('firebaseAuthToken');
+      }
+    });
+
+    // Refresh token every hour
+    const interval = setInterval(async () => {
+      const user = auth.currentUser;
+      if (user) {
+        await user.getIdToken(true);
+      }
+    }, 60 * 60 * 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, []);
 
   const value = {
     user,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, ArrowLeft, Megaphone } from "lucide-react";
@@ -10,7 +11,10 @@ interface Announcement {
   id: string;
   title: string;
   content: string;
-  created_at: string;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
 }
 
 export default function Announcements() {
@@ -24,13 +28,16 @@ export default function Announcements() {
 
   const fetchAnnouncements = async () => {
     try {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setAnnouncements(data || []);
+      const announcementsRef = collection(db, "announcements");
+      const q = query(announcementsRef, orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      
+      const announcementsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Announcement[];
+      
+      setAnnouncements(announcementsData);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     } finally {
@@ -100,7 +107,7 @@ export default function Announcements() {
                     {announcement.title}
                   </CardTitle>
                   <CardDescription className="text-base font-semibold text-muted-foreground">
-                    {format(new Date(announcement.created_at), "PPPP 'at' p")}
+                    {format(new Date(announcement.createdAt.seconds * 1000), "PPPP 'at' p")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-8 pb-8">
